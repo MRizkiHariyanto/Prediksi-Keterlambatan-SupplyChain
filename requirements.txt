@@ -5,3 +5,4 @@ xgboost
 category_encoders
 scikit-learn
 joblib
+plotly
