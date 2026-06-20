@@ -246,6 +246,47 @@ COUNTRY_DATACO: dict[str, str] = {
 }
 
 
+@st.cache_data(show_spinner=False)
+def load_city_lists() -> tuple[list[str], list[str]]:
+    """
+    Memuat daftar kota Order City (top 300 frekuensi) dan Customer City (semua unik)
+    langsung dari DataCoSupplyChainDataset.csv.
+
+    Menggunakan @st.cache_data agar file CSV hanya dibaca sekali.
+    Jika file tidak ditemukan, mengembalikan list fallback minimal.
+    """
+    csv_path = BASE_DIR / 'DataCoSupplyChainDataset.csv'
+    if not csv_path.exists():
+        # Fallback: kota-kota umum DataCo jika CSV tidak tersedia
+        fallback_order = [
+            'Abidjan', 'Accra', 'Amsterdam', 'Ankara', 'Arlington', 'Atlanta',
+            'Auckland', 'Bangkok', 'Barcelona', 'Beijing', 'Berlin', 'Bogot\u00e1',
+            'Boston', 'Brussels', 'Buenos Aires', 'Cairo', 'Chicago', 'Dallas',
+            'Dubai', 'Frankfurt', 'Hong Kong', 'Houston', 'Istanbul', 'Jakarta',
+            'Karachi', 'Lagos', 'Lima', 'London', 'Los Angeles', 'Madrid',
+            'Manila', 'Mexico City', 'Miami', 'Milan', 'Moscow', 'Mumbai',
+            'Nairobi', 'New York', 'Paris', 'Rome', 'S\u00e3o Paulo', 'Seoul',
+            'Shanghai', 'Singapore', 'Sydney', 'Tehran', 'Tokyo', 'Toronto',
+            'Vancouver', 'Vienna', 'Warsaw', 'Washington DC',
+        ]
+        fallback_customer = fallback_order[:]
+        return sorted(fallback_order), sorted(fallback_customer)
+
+    try:
+        df = pd.read_csv(csv_path, encoding='latin-1',
+                         usecols=['Order City', 'Customer City'])
+        order_cities    = sorted(
+            df['Order City'].value_counts().head(300).index.tolist()
+        )
+        customer_cities = sorted(df['Customer City'].dropna().unique().tolist())
+        return order_cities, customer_cities
+    except Exception:
+        return [], []
+
+
+ORDER_CITIES, CUSTOMER_CITIES = load_city_lists()
+
+
 def build_input_dataframe(
     order_city:      str,
     customer_city:   str,
@@ -347,17 +388,17 @@ with st.form(key="dss_prediction_form", border=True):
                 unsafe_allow_html=True)
     col_ocity, col_ccity = st.columns(2)
     with col_ocity:
-        order_city = st.text_input(
+        order_city = st.selectbox(
             "Kota Asal Gudang (Order City) ★",
-            value="",
-            placeholder="Contoh: Chicago",
+            options=ORDER_CITIES if ORDER_CITIES else ["Chicago", "Los Angeles", "New York"],
+            index=0,
             help="[SHAP Rank #8] Kota tempat gudang pengirim berada."
         )
     with col_ccity:
-        customer_city = st.text_input(
+        customer_city = st.selectbox(
             "Kota Tujuan Pelanggan (Customer City) ★",
-            value="",
-            placeholder="Contoh: Los Angeles",
+            options=CUSTOMER_CITIES if CUSTOMER_CITIES else ["Los Angeles", "Chicago", "Houston"],
+            index=0,
             help="[SHAP Rank #7] Kota tujuan pengiriman pelanggan."
         )
 
