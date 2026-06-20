@@ -246,40 +246,13 @@ COUNTRY_DATACO: dict[str, str] = {
 }
 
 
-@st.cache_data(show_spinner=False)
-def load_city_lists() -> tuple[list[str], list[str], dict, dict]:
-    """
-    Memuat daftar kota serta peta pemetaan ke State dan Country
-    langsung dari DataCoSupplyChainDataset.csv.
-    """
-    csv_path = BASE_DIR / 'DataCoSupplyChainDataset.csv'
-    if not csv_path.exists():
-        fallback_order = ['Chicago']
-        fallback_customer = ['Los Angeles']
-        return fallback_order, fallback_customer, {'Chicago': ('Illinois', 'Estados Unidos')}, {'Los Angeles': ('CA', 'EE. UU.')}
-
-    try:
-        df = pd.read_csv(csv_path, encoding='latin-1',
-                         usecols=['Order City', 'Order State', 'Order Country', 'Customer City', 'Customer State', 'Customer Country'])
-        
-        # Mapping Order City -> (Order State, Order Country)
-        top_order_cities = sorted(df['Order City'].value_counts().head(300).index.tolist())
-        order_map = {}
-        for city, group in df.groupby('Order City'):
-            if city in top_order_cities:
-                order_map[city] = (group['Order State'].mode()[0], group['Order Country'].mode()[0])
-
-        # Mapping Customer City -> (Customer State, Customer Country)
-        customer_cities = sorted(df['Customer City'].dropna().unique().tolist())
-        customer_map = {}
-        for city, group in df.groupby('Customer City'):
-            customer_map[city] = (group['Customer State'].mode()[0], group['Customer Country'].mode()[0])
-
-        return top_order_cities, customer_cities, order_map, customer_map
-    except Exception:
-        return [], [], {}, {}
-
-ORDER_CITIES, CUSTOMER_CITIES, ORDER_CITY_MAP, CUSTOMER_CITY_MAP = load_city_lists()
+try:
+    from city_data import ORDER_CITIES, CUSTOMER_CITIES, ORDER_CITY_MAP, CUSTOMER_CITY_MAP
+except ImportError:
+    ORDER_CITIES = ["Chicago"]
+    CUSTOMER_CITIES = ["Los Angeles"]
+    ORDER_CITY_MAP = {"Chicago": ("Illinois", "Estados Unidos")}
+    CUSTOMER_CITY_MAP = {"Los Angeles": ("CA", "EE. UU.")}
 
 
 def build_input_dataframe(
