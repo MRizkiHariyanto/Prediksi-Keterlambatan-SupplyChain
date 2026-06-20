@@ -2,6 +2,10 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import joblib
+from pathlib import Path
+
+# Direktori tempat app.py berada (aman di Streamlit Cloud maupun lokal)
+BASE_DIR = Path(__file__).parent
 
 # ==============================================================================
 # KONFIGURASI HALAMAN
@@ -123,13 +127,24 @@ st.markdown("""
 # ==============================================================================
 @st.cache_resource(show_spinner="⏳ Memuat model AI ke memori...")
 def load_artifacts():
-    """Memuat model XGBoost dan Target Encoder dari file .pkl."""
+    """Memuat model XGBoost dan Target Encoder dari file .pkl.
+    
+    Menggunakan path absolut (BASE_DIR) agar berjalan konsisten
+    di lingkungan lokal maupun Streamlit Cloud.
+    """
+    model_path   = BASE_DIR / 'model_logistik.pkl'
+    encoder_path = BASE_DIR / 'encoder_rute.pkl'
+    
     try:
-        model   = joblib.load('model_logistik.pkl')
-        encoder = joblib.load('encoder_rute.pkl')
+        model   = joblib.load(model_path)
+        encoder = joblib.load(encoder_path)
         return model, encoder
     except FileNotFoundError as e:
-        st.error(f"❌ File artefak tidak ditemukan: {e}")
+        st.error(
+            f"❌ File artefak tidak ditemukan: `{e}`\n\n"
+            f"Pastikan file `model_logistik.pkl` dan `encoder_rute.pkl` "
+            f"ada di direktori yang sama dengan `app.py` di repositori GitHub."
+        )
         return None, None
     except Exception as e:
         st.error(f"❌ Gagal memuat model/encoder: {e}")
