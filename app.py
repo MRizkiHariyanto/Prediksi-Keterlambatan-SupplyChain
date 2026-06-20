@@ -195,7 +195,7 @@ def run_feature_engineering(df_input: pd.DataFrame) -> pd.DataFrame:
     # --- Fitur Temporal: Hari Pemesanan dalam Seminggu ---
     if 'order date (DateOrders)' in df_input.columns:
         try:
-            order_dates = pd.to_datetime(df_input['order date (DateOrders)'], infer_datetime_format=True, errors='coerce')
+            order_dates = pd.to_datetime(df_input['order date (DateOrders)'], errors='coerce')
             df_clean['Order_DayOfWeek'] = order_dates.dt.dayofweek
         except Exception:
             df_clean['Order_DayOfWeek'] = 0
@@ -269,7 +269,7 @@ def calculate_cba(
 # ==============================================================================
 def highlight_risk(row):
     """Memberi warna merah pada baris yang diprediksi berisiko terlambat."""
-    if row.get('AI_Prediction_Status', '') == '⚠️ RISIKO TERLAMBAT':
+    if 'AI_Prediction_Status' in row.index and row['AI_Prediction_Status'] == '⚠️ RISIKO TERLAMBAT':
         return ['background-color: rgba(233, 69, 96, 0.15); color: #ff6b8a'] * len(row)
     return [''] * len(row)
 
@@ -347,16 +347,16 @@ if uploaded_file is not None and model is not None:
             if MODE == "A":
                 st.divider()
                 y_true = df_input['Late_delivery_risk'].values
-                acc    = accuracy_score(y_true, y_pred_custom) * 100
-                rec    = recall_score(y_true, y_pred_custom)   * 100
-                f1     = f1_score(y_true, y_pred_custom)       * 100
+                acc_val = accuracy_score(y_true, y_pred_custom) * 100
+                rec_val = recall_score(y_true, y_pred_custom)   * 100
+                f1_val  = f1_score(y_true, y_pred_custom)       * 100
 
                 st.markdown("#### 🎯 Metrik Kinerja Model (Evaluasi Akurasi)")
                 m1, m2, m3 = st.columns(3)
-                m1.metric("Akurasi Model",   f"{acc:.2f}%")
-                m2.metric("Recall (Sensitivitas)", f"{rec:.2f}%",
+                m1.metric("Akurasi Model",        f"{acc_val:.2f}%")
+                m2.metric("Recall (Sensitivitas)", f"{rec_val:.2f}%",
                           help="Kemampuan model mendeteksi SEMUA paket yang benar-benar terlambat.")
-                m3.metric("F1-Score",        f"{f1:.2f}%",
+                m3.metric("F1-Score",              f"{f1_val:.2f}%",
                           help="Keseimbangan antara Precision dan Recall.")
 
                 st.divider()
@@ -447,19 +447,19 @@ if uploaded_file is not None and model is not None:
                         \text{Uang Diselamatkan} = \text{Cost}_{\text{Tanpa AI}} - \text{Cost}_{\text{Dengan AI}}
                     """)
 
-                f1, f2, f3 = st.columns(3)
-                f1.metric(
+                col1_cba, col2_cba, col3_cba = st.columns(3)
+                col1_cba.metric(
                     "💸 Biaya Tanpa AI",
                     f"${cba['cost_tanpa_ai']:,.2f}",
                     help=f"Asumsi semua {cba['total_telat_aktual']:,} paket terlambat kena denda penuh @ ${cost_SLA}"
                 )
-                f2.metric(
+                col2_cba.metric(
                     "🤖 Biaya Dengan AI",
                     f"${cba['cost_dengan_ai']:,.2f}",
                     help="Total biaya aktual dengan intervensi AI (meliputi FN lolos + FP alarm palsu + TP ditangani)."
                 )
                 delta_sign = "+" if cba['uang_diselamatkan'] >= 0 else ""
-                f3.metric(
+                col3_cba.metric(
                     "✅ Anggaran Diselamatkan",
                     f"${cba['uang_diselamatkan']:,.2f}",
                     f"ROI AI: {delta_sign}{cba['roi_persen']:.1f}%",
@@ -514,15 +514,15 @@ if uploaded_file is not None and model is not None:
                     y=[
                         cba['cost_tanpa_ai'],
                         -(cba['TP'] * (cost_SLA - cost_TP)),
-                        0.0,
+                        -(cba['FN'] * (cost_SLA - cost_SLA)),
                         cba['FP'] * cost_FP,
                         None
                     ],
                     text=[
                         f"${cba['cost_tanpa_ai']:,.0f}",
-                        f"-${cba['TP'] * (cost_SLA - cost_TP):,.0f}",
-                        f"$0",
-                        f"+${cba['FP'] * cost_FP:,.0f}",
+                        f"-${cba['TP'] * (cost_SLA - cost_TP):,.0f}  (TP dihemat)",
+                        f"$0  (FN tetap kena denda)",
+                        f"+${cba['FP'] * cost_FP:,.0f}  (FP boros)",
                         f"${cba['cost_dengan_ai']:,.0f}"
                     ],
                     textposition="outside",
