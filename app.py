@@ -321,28 +321,21 @@ def build_input_dataframe(
     order_country    = COUNTRY_DATACO.get(order_country_label, "EE. UU.")
 
     row = {
-        # ── TOP FEATURES (diinput user) ──
         "Type":                          order_type,
         "Days for shipment (scheduled)": days_scheduled,
-        "Customer City":                 customer_city.strip(),
-        "Customer Country":              customer_country,
-        "Customer State":                customer_state.strip(),
-        "Latitude":                      lat,
-        "Longitude":                     lon,
-        "Order City":                    order_city.strip(),
-        "Order Country":                 order_country,
-        "Order State":                   order_state.strip(),
-        "Shipping Mode":                 shipping_mode,
-        "Order_DayOfWeek":               day_of_week,
-        "Route":                         route,
-
-        # ── FITUR DEFAULT (pengaruh rendah, dikunci ke median DataCo) ──
         "Benefit per order":             10.0,
         "Sales per customer":            200.0,
         "Category Name":                 "Fishing",
+        "Customer City":                 customer_city.strip(),
+        "Customer Country":              customer_country,
         "Customer Segment":              "Consumer",
+        "Customer State":                customer_state.strip(),
         "Department Name":               "Fan Shop",
+        "Latitude":                      lat,
+        "Longitude":                     lon,
         "Market":                        "USCA",
+        "Order City":                    order_city.strip(),
+        "Order Country":                 order_country,
         "Order Item Discount":           5.0,
         "Order Item Discount Rate":      0.05,
         "Order Item Product Price":      99.99,
@@ -352,9 +345,13 @@ def build_input_dataframe(
         "Order Item Total":              299.97,
         "Order Profit Per Order":        53.99,
         "Order Region":                  "West of USA",
+        "Order State":                   order_state.strip(),
         "Product Name":                  "Field & Stream Sportsman 16 Gun Fire Safe",
         "Product Price":                 99.99,
-        "Logistics_Burden":              0.75,   # default representatif
+        "Shipping Mode":                 shipping_mode,
+        "Order_DayOfWeek":               day_of_week,
+        "Logistics_Burden":              0.75,
+        "Route":                         route,
     }
 
     return pd.DataFrame([row])
