@@ -510,7 +510,10 @@ if submitted:
         st.markdown("**📋 Ringkasan Parameter Prediksi**")
 
         # Fitur yang dihitung otomatis
-        lat_val, lon_val = COUNTRY_GEO.get(customer_country_label, (0.0, 0.0))
+        customer_state, customer_country = CUSTOMER_CITY_MAP.get(customer_city, ("CA", "EE. UU."))
+        order_state, order_country       = ORDER_CITY_MAP.get(order_city, ("California", "Estados Unidos"))
+        
+        lat_val, lon_val = (18.22, -66.59) if customer_country == "Puerto Rico" else (39.50, -98.35)
         route_val        = f"{order_city.strip()} → {customer_city.strip()}"
         day_names        = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"]
 
@@ -518,9 +521,9 @@ if submitted:
         | Parameter | Nilai |
         |---|---|
         | 📍 Rute | `{route_val}` |
-        | 🌍 Negara Pelanggan | `{COUNTRY_DATACO.get(customer_country_label, '-')}` |
-        | 📌 Negara Gudang | `{COUNTRY_DATACO.get(order_country_label, '-')}` |
-        | 📌 State Pelanggan | `{customer_state.strip()}` |
+        | 🌍 Negara Pelanggan | `{customer_country}` |
+        | 📌 Negara Gudang | `{order_country}` |
+        | 📌 State Pelanggan | `{customer_state}` |
         | 🚛 Moda Kirim | `{shipping_mode}` |
         | ⏱️ Target Hari | `{days_scheduled} hari` |
         | 💳 Tipe Transaksi | `{order_type}` |
