@@ -29,7 +29,7 @@ st.markdown("""
 Aplikasi ini mendeteksi risiko keterlambatan pengiriman paket (*Late Delivery Risk*) berdasarkan parameter operasional, rute, dan beban logistik gudang menggunakan arsitektur **XGBoost Teroptimasi** (Intervensi Threshold: **0.45**).
 """)
 
-st.hr()
+st.divider()
 
 # 3. SIDEBAR INFO & SIMULASI FINANSIAL
 st.sidebar.header("⚙️ Parameter Bisnis (Audit SLA)")
@@ -116,7 +116,7 @@ if uploaded_file is not None and model is not None:
             penghematan = cost_baseline - cost_ai
             st.metric("Estimasi Anggaran Diselamatkan", f"${penghematan:,.2f}", delta="Efisiensi AI", delta_color="inverse")
             
-        st.hr()
+        st.divider()
         
         # 9. INTERACTIVE DATA VIEWER
         st.subheader("🔍 Filter & Telusuri Hasil Keputusan Sistem AI")
