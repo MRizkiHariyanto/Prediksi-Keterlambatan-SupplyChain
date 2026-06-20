@@ -202,81 +202,118 @@ with st.sidebar:
 
 
 # ==============================================================================
-# 4. FUNGSI SINTESIS FITUR & PREDIKSI
+# LOOKUP: NEGARA → (LATITUDE, LONGITUDE) REPRESENTATIF
+# Berdasarkan distribusi geografis dataset DataCo Supply Chain
 # ==============================================================================
+COUNTRY_GEO: dict[str, tuple[float, float]] = {
+    "EE. UU. (United States)": (39.50, -98.35),
+    "Puerto Rico":             (18.22, -66.59),
+    "México":                  (23.63, -102.55),
+    "Francia":                 (46.23,   2.21),
+    "Alemania":                (51.17,  10.45),
+    "Brasil":                  (-14.24, -51.93),
+    "Australia":               (-25.27, 133.78),
+    "Argentina":               (-38.42, -63.62),
+    "Colombia":                (4.57,  -74.30),
+    "China":                   (35.86, 104.20),
+    "Indonesia":               (-0.79, 113.92),
+    "India":                   (20.59,  78.96),
+    "Nigeria":                 (9.08,    8.68),
+    "Egipto":                  (26.82,  30.80),
+    "Sudáfrica":               (-28.47,  24.68),
+    "Otros / Lainnya":         (0.00,    0.00),
+}
+COUNTRY_LABELS = list(COUNTRY_GEO.keys())
+
+# Mapping label → nama asli di dataset DataCo
+COUNTRY_DATACO: dict[str, str] = {
+    "EE. UU. (United States)": "EE. UU.",
+    "Puerto Rico":             "Puerto Rico",
+    "México":                  "México",
+    "Francia":                 "Francia",
+    "Alemania":                "Alemania",
+    "Brasil":                  "Brasil",
+    "Australia":               "Australia",
+    "Argentina":               "Argentina",
+    "Colombia":                "Colombia",
+    "China":                   "China",
+    "Indonesia":               "Indonesia",
+    "India":                   "India",
+    "Nigeria":                 "Nigeria",
+    "Egipto":                  "Egipto",
+    "Sudáfrica":               "Sudáfrica",
+    "Otros / Lainnya":         "Others",
+}
+
+
 def build_input_dataframe(
-    qty: int,
-    days_scheduled: int,
-    order_city: str,
-    customer_city: str,
-    shipping_mode: str,
-    day_of_week: int,
-    order_type: str,
-    customer_segment: str,
-    market: str,
-    order_region: str,
-    product_price: float,
-    discount_rate: float,
-    profit_ratio: float,
+    order_city:      str,
+    customer_city:   str,
+    customer_country_label: str,
+    order_country_label:    str,
+    customer_state:  str,
+    order_state:     str,
+    shipping_mode:   str,
+    days_scheduled:  int,
+    order_type:      str,
+    day_of_week:     int,
 ) -> pd.DataFrame:
     """
-    Menyusun satu baris DataFrame dengan TEPAT 31 fitur yang diharapkan model.
+    Menyusun 1 baris DataFrame dengan 31 fitur model.
 
-    Fitur model (urutan asli dari training):
-      Type, Days for shipment (scheduled), Benefit per order, Sales per customer,
-      Category Name, Customer City, Customer Country, Customer Segment,
-      Customer State, Department Name, Latitude, Longitude, Market,
-      Order City, Order Country, Order Item Discount, Order Item Discount Rate,
-      Order Item Product Price, Order Item Profit Ratio, Order Item Quantity,
-      Sales, Order Item Total, Order Profit Per Order, Order Region, Order State,
-      Product Name, Product Price, Shipping Mode, Order_DayOfWeek,
-      Logistics_Burden, Route
+    INPUT USER (10 fitur paling berpengaruh per SHAP & Gini Importance):
+      Route (auto), Shipping Mode, Customer Country, Order Country,
+      Customer State, Order State, Customer City, Order City,
+      Days for shipment (scheduled), Type, Order_DayOfWeek
 
-    Fitur `Logistics_Burden` dan `Route` disintesis otomatis dari input user.
-    Kolom sekunder diisi dengan nilai default representatif dataset DataCo.
+    OTOMATIS DIHITUNG:
+      Route = Order City + " to " + Customer City
+      Logistics_Burden = default 1.0 (fitur kurang berpengaruh)
+      Latitude/Longitude = diambil dari lookup negara pelanggan
+
+    NILAI DEFAULT (fitur dengan pengaruh rendah per SHAP):
+      Semua kolom finansial menggunakan nilai median DataCo.
     """
-    logistics_burden = qty / (days_scheduled + 0.001)
     route            = f"{order_city.strip()} to {customer_city.strip()}"
-    discount_amount  = product_price * discount_rate
-    total_item       = product_price * qty
-    sales            = total_item * (1 - discount_rate)
-    profit_per_order = total_item * profit_ratio
+    lat, lon         = COUNTRY_GEO.get(customer_country_label, (0.0, 0.0))
+    customer_country = COUNTRY_DATACO.get(customer_country_label, "EE. UU.")
+    order_country    = COUNTRY_DATACO.get(order_country_label, "EE. UU.")
 
-    # Latitude/Longitude: default pusat geografis USA (nilai representatif DataCo)
-    # TargetEncoder tidak menggunakan kolom ini untuk encoding (bukan di encoder.cols),
-    # sehingga nilai numerik default sudah cukup aman.
     row = {
-        "Type":                         order_type,
+        # ── TOP FEATURES (diinput user) ──
+        "Type":                          order_type,
         "Days for shipment (scheduled)": days_scheduled,
-        "Benefit per order":            10.0,
-        "Sales per customer":           200.0,
-        "Category Name":               "Fishing",
-        "Customer City":               customer_city.strip(),
-        "Customer Country":            "EE. UU.",
-        "Customer Segment":            customer_segment,
-        "Customer State":              "CA",
-        "Department Name":             "Fan Shop",
-        "Latitude":                    -30.0,          # nilai rata-rata DataCo
-        "Longitude":                   -70.0,          # nilai rata-rata DataCo
-        "Market":                      market,
-        "Order City":                  order_city.strip(),
-        "Order Country":               "EE. UU.",
-        "Order Item Discount":         discount_amount,
-        "Order Item Discount Rate":    discount_rate,
-        "Order Item Product Price":    product_price,
-        "Order Item Profit Ratio":     profit_ratio,
-        "Order Item Quantity":         qty,
-        "Sales":                       sales,
-        "Order Item Total":            total_item,
-        "Order Profit Per Order":      profit_per_order,
-        "Order Region":                order_region,
-        "Order State":                 "California",
-        "Product Name":                "Field & Stream Sportsman 16 Gun Fire Safe",
-        "Product Price":               product_price,
-        "Shipping Mode":               shipping_mode,
-        "Order_DayOfWeek":             day_of_week,
-        "Logistics_Burden":            logistics_burden,
-        "Route":                       route,
+        "Customer City":                 customer_city.strip(),
+        "Customer Country":              customer_country,
+        "Customer State":                customer_state.strip(),
+        "Latitude":                      lat,
+        "Longitude":                     lon,
+        "Order City":                    order_city.strip(),
+        "Order Country":                 order_country,
+        "Order State":                   order_state.strip(),
+        "Shipping Mode":                 shipping_mode,
+        "Order_DayOfWeek":               day_of_week,
+        "Route":                         route,
+
+        # ── FITUR DEFAULT (pengaruh rendah, dikunci ke median DataCo) ──
+        "Benefit per order":             10.0,
+        "Sales per customer":            200.0,
+        "Category Name":                 "Fishing",
+        "Customer Segment":              "Consumer",
+        "Department Name":               "Fan Shop",
+        "Market":                        "USCA",
+        "Order Item Discount":           5.0,
+        "Order Item Discount Rate":      0.05,
+        "Order Item Product Price":      99.99,
+        "Order Item Profit Ratio":       0.18,
+        "Order Item Quantity":           3,
+        "Sales":                         284.97,
+        "Order Item Total":              299.97,
+        "Order Profit Per Order":        53.99,
+        "Order Region":                  "West of USA",
+        "Product Name":                  "Field & Stream Sportsman 16 Gun Fire Safe",
+        "Product Price":                 99.99,
+        "Logistics_Burden":              0.75,   # default representatif
     }
 
     return pd.DataFrame([row])
@@ -297,128 +334,105 @@ def run_prediction(df_raw: pd.DataFrame):
 
 
 # ==============================================================================
-# 5. FORMULIR INPUT DSS
+# 5. FORMULIR INPUT DSS — HANYA FITUR PALING BERPENGARUH
 # ==============================================================================
-st.markdown('<p class="section-label">📋 Formulir Asesmen Operasional</p>', unsafe_allow_html=True)
+st.markdown('<p class="section-label">📋 Formulir Asesmen Operasional — Berbasis Top-10 Fitur SHAP</p>',
+            unsafe_allow_html=True)
 
 with st.form(key="dss_prediction_form", border=True):
 
-    # ── Baris 1: Informasi Paket & Waktu ─────────────────────────────────────
-    st.markdown("**📦 Data Paket & Jadwal Pengiriman**")
-    col_qty, col_days, col_mode, col_type = st.columns(4)
+    # ── Baris 1: RUTE (Fitur #1 & #8 SHAP — Route, Order City, Customer City) ──
+    st.markdown("**🗺️ Rute Pengiriman** &nbsp;·&nbsp; "
+                "<small style='color:#7c3aed'>Fitur paling berpengaruh (#1 SHAP)</small>",
+                unsafe_allow_html=True)
+    col_ocity, col_ccity = st.columns(2)
+    with col_ocity:
+        order_city = st.text_input(
+            "Kota Asal Gudang (Order City) ★",
+            value="",
+            placeholder="Contoh: Chicago",
+            help="[SHAP Rank #8] Kota tempat gudang pengirim berada."
+        )
+    with col_ccity:
+        customer_city = st.text_input(
+            "Kota Tujuan Pelanggan (Customer City) ★",
+            value="",
+            placeholder="Contoh: Los Angeles",
+            help="[SHAP Rank #7] Kota tujuan pengiriman pelanggan."
+        )
 
-    with col_qty:
-        qty = st.number_input(
-            "Jumlah Item Pesanan",
-            min_value=1, max_value=500, value=3, step=1,
-            help="Jumlah unit barang dalam satu transaksi pengiriman."
+    st.divider()
+
+    # ── Baris 2: SHIPPING MODE & DAYS (Fitur #2 & #6 SHAP) ────────────────────
+    st.markdown("**🚛 Mode & Jadwal Pengiriman** &nbsp;·&nbsp; "
+                "<small style='color:#7c3aed'>Fitur berpengaruh tinggi (#2 & #6 SHAP)</small>",
+                unsafe_allow_html=True)
+    col_mode, col_days, col_type, col_dow = st.columns(4)
+    with col_mode:
+        shipping_mode = st.selectbox(
+            "Moda Pengiriman ★",
+            options=["Standard Class", "Second Class", "First Class", "Same Day"],
+            index=0,
+            help="[SHAP Rank #2 | Gini #3] Kelas layanan pengiriman yang paling kuat mempengaruhi keterlambatan."
         )
     with col_days:
         days_scheduled = st.number_input(
-            "Target Hari Pengiriman",
+            "Target Hari Pengiriman ★",
             min_value=0, max_value=30, value=4, step=1,
-            help="Estimasi durasi pengiriman terjadwal (dalam hari kerja)."
-        )
-    with col_mode:
-        shipping_mode = st.selectbox(
-            "Moda Pengiriman",
-            options=["Standard Class", "Second Class", "First Class", "Same Day"],
-            index=0,
-            help="Kelas layanan pengiriman yang dipilih pelanggan."
+            help="[SHAP Rank #6 | Gini #4] Estimasi durasi pengiriman terjadwal."
         )
     with col_type:
+        order_type = st.selectbox(
+            "Tipe Transaksi ★",
+            options=["DEBIT", "TRANSFER", "CASH", "PAYMENT"],
+            index=0,
+            help="[SHAP Rank #5] Metode pembayaran transaksi."
+        )
+    with col_dow:
         day_of_week = st.selectbox(
-            "Hari Pemesanan (0=Senin)",
+            "Hari Pemesanan",
             options=list(range(7)),
-            format_func=lambda x: ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"][x],
+            format_func=lambda x: ["Senin","Selasa","Rabu","Kamis","Jumat","Sabtu","Minggu"][x],
             index=0,
             help="Hari dalam minggu saat pesanan dibuat."
         )
 
     st.divider()
 
-    # ── Baris 2: Rute Pengiriman ──────────────────────────────────────────────
-    st.markdown("**🗺️ Rute Pengiriman (Asal → Tujuan)**")
-    col_ocity, col_ccity = st.columns(2)
-
-    with col_ocity:
-        order_city = st.text_input(
-            "Kota Asal Gudang (Order City)",
-            value="",
-            placeholder="Contoh: Chicago",
-            help="Kota asal gudang pengirim barang."
+    # ── Baris 3: NEGARA & STATE (Fitur #1 Gini, #3&#4 SHAP — Lat/Lon via Country) ──
+    st.markdown("**🌍 Lokasi Geografis** &nbsp;·&nbsp; "
+                "<small style='color:#7c3aed'>Customer Country = fitur #1 Gini · "
+                "Lat/Lon diturunkan otomatis</small>",
+                unsafe_allow_html=True)
+    col_ccountry, col_ocountry, col_cstate, col_ostate = st.columns(4)
+    with col_ccountry:
+        customer_country_label = st.selectbox(
+            "Negara Pelanggan (Customer Country) ★",
+            options=COUNTRY_LABELS,
+            index=0,
+            help="[Gini Rank #1 | SHAP Lat #3 / Lon #4] Negara tujuan pelanggan. "
+                 "Latitude & Longitude diturunkan otomatis dari pilihan ini."
         )
-    with col_ccity:
-        customer_city = st.text_input(
-            "Kota Tujuan Pelanggan (Customer City)",
-            value="",
-            placeholder="Contoh: Los Angeles",
-            help="Kota tujuan pengiriman ke pelanggan akhir."
+    with col_ocountry:
+        order_country_label = st.selectbox(
+            "Negara Asal Gudang (Order Country) ★",
+            options=COUNTRY_LABELS,
+            index=0,
+            help="[SHAP Rank #10] Negara asal gudang pengirim."
         )
-
-    st.divider()
-
-    # ── Baris 3: Konteks Pelanggan & Pasar ───────────────────────────────────
-    st.markdown("**🌐 Segmen Pasar & Pelanggan**")
-    col_seg, col_market, col_region, col_order_type = st.columns(4)
-
-    with col_seg:
-        customer_segment = st.selectbox(
-            "Segmen Pelanggan",
-            options=["Consumer", "Corporate", "Home Office"],
-            index=0
+    with col_cstate:
+        customer_state = st.text_input(
+            "Provinsi/State Pelanggan ★",
+            value="CA",
+            placeholder="Contoh: CA, TX, NY",
+            help="[Gini Rank #9] Kode provinsi/state pelanggan (singkatan 2 huruf)."
         )
-    with col_market:
-        market = st.selectbox(
-            "Pasar",
-            options=["USCA", "Europe", "LATAM", "Pacific Asia", "Africa"],
-            index=0
-        )
-    with col_region:
-        order_region = st.selectbox(
-            "Wilayah Pesanan",
-            options=[
-                "Western Europe", "Central America", "Oceania",
-                "Eastern Asia", "West of USA", "US Center",
-                "East of USA", "Canada", "Southern Asia",
-                "South America", "Southeast Asia", "Eastern Europe",
-                "West Africa", "Central Asia", "North Africa",
-                "Southern Africa", "Middle East", "Caribbean"
-            ],
-            index=4
-        )
-    with col_order_type:
-        order_type = st.selectbox(
-            "Tipe Transaksi",
-            options=["DEBIT", "TRANSFER", "CASH", "PAYMENT"],
-            index=0
-        )
-
-    st.divider()
-
-    # ── Baris 4: Parameter Finansial Produk ───────────────────────────────────
-    st.markdown("**💰 Parameter Finansial Produk**")
-    col_price, col_disc, col_profit = st.columns(3)
-
-    with col_price:
-        product_price = st.number_input(
-            "Harga Satuan Produk ($)",
-            min_value=0.01, max_value=5000.0, value=99.99, step=0.01,
-            format="%.2f"
-        )
-    with col_disc:
-        discount_rate = st.number_input(
-            "Tingkat Diskon (0–1)",
-            min_value=0.0, max_value=1.0, value=0.05, step=0.01,
-            format="%.2f",
-            help="Rasio diskon: 0.05 = diskon 5%."
-        )
-    with col_profit:
-        profit_ratio = st.number_input(
-            "Rasio Profit (0–1)",
-            min_value=-1.0, max_value=1.0, value=0.18, step=0.01,
-            format="%.2f",
-            help="Margin keuntungan per item."
+    with col_ostate:
+        order_state = st.text_input(
+            "Provinsi/State Gudang",
+            value="California",
+            placeholder="Contoh: California",
+            help="[SHAP Rank #9] Nama lengkap state gudang pengirim."
         )
 
     st.divider()
@@ -456,19 +470,16 @@ if submitted:
     with st.spinner("🤖 Sistem AI sedang mengevaluasi risiko pengiriman..."):
         try:
             df_input    = build_input_dataframe(
-                qty=qty,
-                days_scheduled=days_scheduled,
                 order_city=order_city,
                 customer_city=customer_city,
+                customer_country_label=customer_country_label,
+                order_country_label=order_country_label,
+                customer_state=customer_state,
+                order_state=order_state,
                 shipping_mode=shipping_mode,
-                day_of_week=day_of_week,
+                days_scheduled=days_scheduled,
                 order_type=order_type,
-                customer_segment=customer_segment,
-                market=market,
-                order_region=order_region,
-                product_price=product_price,
-                discount_rate=discount_rate,
-                profit_ratio=profit_ratio,
+                day_of_week=day_of_week,
             )
             probability = run_prediction(df_input)
             is_risky    = probability > 0.45
@@ -531,21 +542,22 @@ if submitted:
         st.markdown("**📋 Ringkasan Parameter Prediksi**")
 
         # Fitur yang dihitung otomatis
-        logistics_burden_val = qty / (days_scheduled + 0.001)
-        route_val            = f"{order_city.strip()} → {customer_city.strip()}"
-        day_names            = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"]
+        lat_val, lon_val = COUNTRY_GEO.get(customer_country_label, (0.0, 0.0))
+        route_val        = f"{order_city.strip()} → {customer_city.strip()}"
+        day_names        = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"]
 
         st.markdown(f"""
         | Parameter | Nilai |
         |---|---|
         | 📍 Rute | `{route_val}` |
-        | 📦 Jumlah Item | `{qty} unit` |
-        | ⏱️ Target Hari | `{days_scheduled} hari` |
+        | 🌍 Negara Pelanggan | `{COUNTRY_DATACO.get(customer_country_label, '-')}` |
+        | 📌 Negara Gudang | `{COUNTRY_DATACO.get(order_country_label, '-')}` |
+        | 📌 State Pelanggan | `{customer_state.strip()}` |
         | 🚛 Moda Kirim | `{shipping_mode}` |
+        | ⏱️ Target Hari | `{days_scheduled} hari` |
+        | 💳 Tipe Transaksi | `{order_type}` |
         | 📅 Hari Pesan | `{day_names[day_of_week]}` |
-        | 🔢 Beban Logistik | `{logistics_burden_val:.3f}` |
-        | 👤 Segmen | `{customer_segment}` |
-        | 🌐 Pasar | `{market}` |
+        | 🗺️ Koordinat | `{lat_val:.2f}°, {lon_val:.2f}°` |
         """)
 
         st.divider()
