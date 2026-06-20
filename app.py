@@ -247,53 +247,44 @@ COUNTRY_DATACO: dict[str, str] = {
 
 
 @st.cache_data(show_spinner=False)
-def load_city_lists() -> tuple[list[str], list[str]]:
+def load_city_lists() -> tuple[list[str], list[str], dict, dict]:
     """
-    Memuat daftar kota Order City (top 300 frekuensi) dan Customer City (semua unik)
+    Memuat daftar kota serta peta pemetaan ke State dan Country
     langsung dari DataCoSupplyChainDataset.csv.
-
-    Menggunakan @st.cache_data agar file CSV hanya dibaca sekali.
-    Jika file tidak ditemukan, mengembalikan list fallback minimal.
     """
     csv_path = BASE_DIR / 'DataCoSupplyChainDataset.csv'
     if not csv_path.exists():
-        # Fallback: kota-kota umum DataCo jika CSV tidak tersedia
-        fallback_order = [
-            'Abidjan', 'Accra', 'Amsterdam', 'Ankara', 'Arlington', 'Atlanta',
-            'Auckland', 'Bangkok', 'Barcelona', 'Beijing', 'Berlin', 'Bogot\u00e1',
-            'Boston', 'Brussels', 'Buenos Aires', 'Cairo', 'Chicago', 'Dallas',
-            'Dubai', 'Frankfurt', 'Hong Kong', 'Houston', 'Istanbul', 'Jakarta',
-            'Karachi', 'Lagos', 'Lima', 'London', 'Los Angeles', 'Madrid',
-            'Manila', 'Mexico City', 'Miami', 'Milan', 'Moscow', 'Mumbai',
-            'Nairobi', 'New York', 'Paris', 'Rome', 'S\u00e3o Paulo', 'Seoul',
-            'Shanghai', 'Singapore', 'Sydney', 'Tehran', 'Tokyo', 'Toronto',
-            'Vancouver', 'Vienna', 'Warsaw', 'Washington DC',
-        ]
-        fallback_customer = fallback_order[:]
-        return sorted(fallback_order), sorted(fallback_customer)
+        fallback_order = ['Chicago']
+        fallback_customer = ['Los Angeles']
+        return fallback_order, fallback_customer, {'Chicago': ('Illinois', 'Estados Unidos')}, {'Los Angeles': ('CA', 'EE. UU.')}
 
     try:
         df = pd.read_csv(csv_path, encoding='latin-1',
-                         usecols=['Order City', 'Customer City'])
-        order_cities    = sorted(
-            df['Order City'].value_counts().head(300).index.tolist()
-        )
+                         usecols=['Order City', 'Order State', 'Order Country', 'Customer City', 'Customer State', 'Customer Country'])
+        
+        # Mapping Order City -> (Order State, Order Country)
+        top_order_cities = sorted(df['Order City'].value_counts().head(300).index.tolist())
+        order_map = {}
+        for city, group in df.groupby('Order City'):
+            if city in top_order_cities:
+                order_map[city] = (group['Order State'].mode()[0], group['Order Country'].mode()[0])
+
+        # Mapping Customer City -> (Customer State, Customer Country)
         customer_cities = sorted(df['Customer City'].dropna().unique().tolist())
-        return order_cities, customer_cities
+        customer_map = {}
+        for city, group in df.groupby('Customer City'):
+            customer_map[city] = (group['Customer State'].mode()[0], group['Customer Country'].mode()[0])
+
+        return top_order_cities, customer_cities, order_map, customer_map
     except Exception:
-        return [], []
+        return [], [], {}, {}
 
-
-ORDER_CITIES, CUSTOMER_CITIES = load_city_lists()
+ORDER_CITIES, CUSTOMER_CITIES, ORDER_CITY_MAP, CUSTOMER_CITY_MAP = load_city_lists()
 
 
 def build_input_dataframe(
     order_city:      str,
     customer_city:   str,
-    customer_country_label: str,
-    order_country_label:    str,
-    customer_state:  str,
-    order_state:     str,
     shipping_mode:   str,
     days_scheduled:  int,
     order_type:      str,
@@ -302,23 +293,23 @@ def build_input_dataframe(
     """
     Menyusun 1 baris DataFrame dengan 31 fitur model.
 
-    INPUT USER (10 fitur paling berpengaruh per SHAP & Gini Importance):
-      Route (auto), Shipping Mode, Customer Country, Order Country,
-      Customer State, Order State, Customer City, Order City,
-      Days for shipment (scheduled), Type, Order_DayOfWeek
+    INPUT USER (6 fitur):
+      Order City, Customer City, Shipping Mode, Days for shipment, Type, Order_DayOfWeek
 
     OTOMATIS DIHITUNG:
       Route = Order City + " to " + Customer City
-      Logistics_Burden = default 1.0 (fitur kurang berpengaruh)
-      Latitude/Longitude = diambil dari lookup negara pelanggan
-
-    NILAI DEFAULT (fitur dengan pengaruh rendah per SHAP):
-      Semua kolom finansial menggunakan nilai median DataCo.
+      State & Country (Order & Customer) = diturunkan otomatis dari peta Kota di dataset
+      Latitude/Longitude = diturunkan dari Customer Country
+      Logistics_Burden = default 0.75
     """
-    route            = f"{order_city.strip()} to {customer_city.strip()}"
-    lat, lon         = COUNTRY_GEO.get(customer_country_label, (0.0, 0.0))
-    customer_country = COUNTRY_DATACO.get(customer_country_label, "EE. UU.")
-    order_country    = COUNTRY_DATACO.get(order_country_label, "EE. UU.")
+    route = f"{order_city.strip()} to {customer_city.strip()}"
+    
+    # Auto-derive state & country from city
+    order_state, order_country = ORDER_CITY_MAP.get(order_city, ("California", "Estados Unidos"))
+    customer_state, customer_country = CUSTOMER_CITY_MAP.get(customer_city, ("CA", "EE. UU."))
+    
+    # Auto-derive lat/lon based on Customer Country (only 2 in dataset: EE. UU. or Puerto Rico)
+    lat, lon = (18.22, -66.59) if customer_country == "Puerto Rico" else (39.50, -98.35)
 
     row = {
         "Type":                          order_type,
@@ -437,41 +428,10 @@ with st.form(key="dss_prediction_form", border=True):
 
     st.divider()
 
-    # ── Baris 3: NEGARA & STATE (Fitur #1 Gini, #3&#4 SHAP — Lat/Lon via Country) ──
-    st.markdown("**🌍 Lokasi Geografis** &nbsp;·&nbsp; "
-                "<small style='color:#7c3aed'>Customer Country = fitur #1 Gini · "
-                "Lat/Lon diturunkan otomatis</small>",
+    st.markdown("**🌍 Otomatisasi Lokasi Geografis** &nbsp;·&nbsp; "
+                "<small style='color:#7c3aed'>Canggih & Simpel</small>",
                 unsafe_allow_html=True)
-    col_ccountry, col_ocountry, col_cstate, col_ostate = st.columns(4)
-    with col_ccountry:
-        customer_country_label = st.selectbox(
-            "Negara Pelanggan (Customer Country) ★",
-            options=COUNTRY_LABELS,
-            index=0,
-            help="[Gini Rank #1 | SHAP Lat #3 / Lon #4] Negara tujuan pelanggan. "
-                 "Latitude & Longitude diturunkan otomatis dari pilihan ini."
-        )
-    with col_ocountry:
-        order_country_label = st.selectbox(
-            "Negara Asal Gudang (Order Country) ★",
-            options=COUNTRY_LABELS,
-            index=0,
-            help="[SHAP Rank #10] Negara asal gudang pengirim."
-        )
-    with col_cstate:
-        customer_state = st.text_input(
-            "Provinsi/State Pelanggan ★",
-            value="CA",
-            placeholder="Contoh: CA, TX, NY",
-            help="[Gini Rank #9] Kode provinsi/state pelanggan (singkatan 2 huruf)."
-        )
-    with col_ostate:
-        order_state = st.text_input(
-            "Provinsi/State Gudang",
-            value="California",
-            placeholder="Contoh: California",
-            help="[SHAP Rank #9] Nama lengkap state gudang pengirim."
-        )
+    st.info("💡 **Smart Location:** Negara (Country), Provinsi (State), serta koordinat Latitude/Longitude untuk Gudang maupun Pelanggan akan **secara otomatis dideteksi** di latar belakang berdasarkan pilihan Kota (City) Anda di atas sesuai database historis logistik.")
 
     st.divider()
 
@@ -506,19 +466,16 @@ if submitted:
 
     # ── Proses Prediksi ───────────────────────────────────────────────────────
     with st.spinner("🤖 Sistem AI sedang mengevaluasi risiko pengiriman..."):
+        # Panggil fungsi build dataframe (HANYA MENGGUNAKAN 6 INPUT)
+        df_input = build_input_dataframe(
+            order_city=order_city,
+            customer_city=customer_city,
+            shipping_mode=shipping_mode,
+            days_scheduled=days_scheduled,
+            order_type=order_type,
+            day_of_week=day_of_week
+        )
         try:
-            df_input    = build_input_dataframe(
-                order_city=order_city,
-                customer_city=customer_city,
-                customer_country_label=customer_country_label,
-                order_country_label=order_country_label,
-                customer_state=customer_state,
-                order_state=order_state,
-                shipping_mode=shipping_mode,
-                days_scheduled=days_scheduled,
-                order_type=order_type,
-                day_of_week=day_of_week,
-            )
             probability = run_prediction(df_input)
             is_risky    = probability > 0.45
 
