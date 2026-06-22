@@ -28,14 +28,14 @@ st.markdown("""
     /* Header Utama */
     .dss-header {
         background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
-        padding: 2rem 2.5rem;
-        border-radius: 14px;
-        margin-bottom: 1.5rem;
+        padding: 0.5rem 1rem;
+        border-radius: 10px;
+        margin-bottom: 0.5rem;
         border-left: 6px solid #7c3aed;
         box-shadow: 0 8px 32px rgba(124, 58, 237, 0.2);
     }
-    .dss-header h1 { color: #ffffff; margin: 0; font-size: 1.9rem; font-weight: 800; letter-spacing: -0.5px; }
-    .dss-header p  { color: #a78bfa; margin: 0.5rem 0 0 0; font-size: 0.92rem; }
+    .dss-header h1 { color: #ffffff; margin: 0; font-size: 1.1rem; font-weight: 800; letter-spacing: -0.5px; }
+    .dss-header p  { color: #a78bfa; margin: 0.1rem 0 0 0; font-size: 0.75rem; }
 
     /* Section Title */
     .section-label {
@@ -52,8 +52,8 @@ st.markdown("""
     .result-danger {
         background: linear-gradient(135deg, rgba(239,68,68,0.15) 0%, rgba(185,28,28,0.1) 100%);
         border: 2px solid rgba(239,68,68,0.5);
-        border-radius: 14px;
-        padding: 2rem 2.5rem;
+        border-radius: 10px;
+        padding: 0.5rem 1rem;
         text-align: center;
         box-shadow: 0 0 40px rgba(239, 68, 68, 0.15);
         animation: pulse-red 2s infinite;
@@ -61,8 +61,8 @@ st.markdown("""
     .result-safe {
         background: linear-gradient(135deg, rgba(16,185,129,0.15) 0%, rgba(5,150,105,0.1) 100%);
         border: 2px solid rgba(16,185,129,0.5);
-        border-radius: 14px;
-        padding: 2rem 2.5rem;
+        border-radius: 10px;
+        padding: 0.5rem 1rem;
         text-align: center;
         box-shadow: 0 0 40px rgba(16, 185, 129, 0.15);
     }
@@ -80,8 +80,8 @@ st.markdown("""
     [data-testid="stForm"] {
         background: #0f172a;
         border: 1px solid #1e293b;
-        border-radius: 14px;
-        padding: 1.5rem;
+        border-radius: 10px;
+        padding: 0.5rem 1rem;
     }
 
     /* Submit button */
@@ -343,10 +343,7 @@ st.markdown('<p class="section-label">📋 Formulir Asesmen Operasional — Berb
 
 with st.form(key="dss_prediction_form", border=True):
 
-    # ── Baris 1: RUTE (Fitur #1 & #8 SHAP — Route, Order City, Customer City) ──
-    st.markdown("**🗺️ Rute Pengiriman** &nbsp;·&nbsp; "
-                "<small style='color:#7c3aed'>Fitur paling berpengaruh (#1 SHAP)</small>",
-                unsafe_allow_html=True)
+    st.markdown("**🗺️ Rute Pengiriman** <small style='color:#7c3aed'>(#1 SHAP)</small>", unsafe_allow_html=True)
     col_ocity, col_ccity = st.columns(2)
     with col_ocity:
         order_city = st.selectbox(
@@ -363,12 +360,7 @@ with st.form(key="dss_prediction_form", border=True):
             help="[SHAP Rank #7] Kota tujuan pengiriman pelanggan."
         )
 
-    st.divider()
-
-    # ── Baris 2: SHIPPING MODE & DAYS (Fitur #2 & #6 SHAP) ────────────────────
-    st.markdown("**🚛 Mode & Jadwal Pengiriman** &nbsp;·&nbsp; "
-                "<small style='color:#7c3aed'>Fitur berpengaruh tinggi (#2 & #6 SHAP)</small>",
-                unsafe_allow_html=True)
+    st.markdown("**🚛 Mode & Jadwal Pengiriman** <small style='color:#7c3aed'>(#2 & #6 SHAP)</small>", unsafe_allow_html=True)
     col_mode, col_days, col_type, col_dow = st.columns(4)
     with col_mode:
         shipping_mode = st.selectbox(
@@ -399,14 +391,7 @@ with st.form(key="dss_prediction_form", border=True):
             help="Hari dalam minggu saat pesanan dibuat."
         )
 
-    st.divider()
-
-    st.markdown("**🌍 Otomatisasi Lokasi Geografis** &nbsp;·&nbsp; "
-                "<small style='color:#7c3aed'>Canggih & Simpel</small>",
-                unsafe_allow_html=True)
-    st.info("💡 **Smart Location:** Negara (Country), Provinsi (State), serta koordinat Latitude/Longitude untuk Gudang maupun Pelanggan akan **secara otomatis dideteksi** di latar belakang berdasarkan pilihan Kota (City) Anda di atas sesuai database historis logistik.")
-
-    st.divider()
+    st.caption("💡 **Smart Location:** Lokasi & koordinat akan dideteksi otomatis berdasarkan pilihan Kota.")
 
     # ── Tombol Submit ─────────────────────────────────────────────────────────
     submitted = st.form_submit_button(
@@ -458,7 +443,6 @@ if submitted:
             st.stop()
 
     # ── Tampilkan Hasil ───────────────────────────────────────────────────────
-    st.markdown("---")
     st.markdown('<p class="section-label">📡 Hasil Asesmen Risiko Real-Time</p>', unsafe_allow_html=True)
 
     col_result, col_detail = st.columns([1.4, 1])
@@ -469,39 +453,38 @@ if submitted:
         if is_risky:
             st.markdown(f"""
             <div class="result-danger">
-                <div style="font-size:3.5rem; margin-bottom:0.5rem;">⚠️</div>
-                <div style="font-size:1.6rem; font-weight:800; color:#f87171; margin-bottom:0.4rem;">
+                <div style="font-size:1.5rem; margin-bottom:0.1rem;">⚠️</div>
+                <div style="font-size:1rem; font-weight:800; color:#f87171; margin-bottom:0.1rem;">
                     RISIKO KETERLAMBATAN TERDETEKSI
                 </div>
-                <div style="font-size:3.8rem; font-weight:900; color:#ef4444; letter-spacing:-2px;">
+                <div style="font-size:2rem; font-weight:900; color:#ef4444; letter-spacing:-1px;">
                     {pct:.1f}%
                 </div>
-                <div style="color:#fca5a5; font-size:0.88rem; margin-top:0.3rem;">
+                <div style="color:#fca5a5; font-size:0.75rem; margin-top:0.1rem;">
                     Probabilitas Keterlambatan · Threshold: 45.0%
                 </div>
-                <div style="margin-top:1rem; font-size:0.85rem; color:#fca5a5; background:rgba(239,68,68,0.1);
-                     border-radius:8px; padding:0.6rem 1rem;">
-                    ⚡ <strong>Rekomendasi:</strong> Lakukan intervensi segera — re-routing, eskalasi kurir,
-                    atau notifikasi proaktif kepada pelanggan.
+                <div style="margin-top:0.3rem; font-size:0.75rem; color:#fca5a5; background:rgba(239,68,68,0.1);
+                     border-radius:8px; padding:0.3rem 0.5rem;">
+                    ⚡ <strong>Rekomendasi:</strong> Lakukan intervensi segera.
                 </div>
             </div>
             """, unsafe_allow_html=True)
         else:
             st.markdown(f"""
             <div class="result-safe">
-                <div style="font-size:3.5rem; margin-bottom:0.5rem;">✅</div>
-                <div style="font-size:1.6rem; font-weight:800; color:#34d399; margin-bottom:0.4rem;">
+                <div style="font-size:1.5rem; margin-bottom:0.1rem;">✅</div>
+                <div style="font-size:1rem; font-weight:800; color:#34d399; margin-bottom:0.1rem;">
                     JADWAL PENGIRIMAN AMAN
                 </div>
-                <div style="font-size:3.8rem; font-weight:900; color:#10b981; letter-spacing:-2px;">
+                <div style="font-size:2rem; font-weight:900; color:#10b981; letter-spacing:-1px;">
                     {pct:.1f}%
                 </div>
-                <div style="color:#6ee7b7; font-size:0.88rem; margin-top:0.3rem;">
+                <div style="color:#6ee7b7; font-size:0.75rem; margin-top:0.1rem;">
                     Probabilitas Keterlambatan · Threshold: 45.0%
                 </div>
-                <div style="margin-top:1rem; font-size:0.85rem; color:#6ee7b7; background:rgba(16,185,129,0.1);
-                     border-radius:8px; padding:0.6rem 1rem;">
-                    ✔️ <strong>Rekomendasi:</strong> Pengiriman dapat dilanjutkan sesuai jadwal standar.
+                <div style="margin-top:0.3rem; font-size:0.75rem; color:#6ee7b7; background:rgba(16,185,129,0.1);
+                     border-radius:8px; padding:0.3rem 0.5rem;">
+                    ✔️ <strong>Rekomendasi:</strong> Pengiriman sesuai jadwal standar.
                 </div>
             </div>
             """, unsafe_allow_html=True)
@@ -531,7 +514,7 @@ if submitted:
         | 🗺️ Koordinat | `{lat_val:.2f}°, {lon_val:.2f}°` |
         """)
 
-        st.divider()
+
 
         # Gauge visual probabilitas menggunakan progress bar
         st.markdown("**📊 Indikator Probabilitas Risiko**")
