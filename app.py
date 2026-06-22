@@ -336,62 +336,25 @@ def run_prediction(df_raw: pd.DataFrame):
 
 
 # ==============================================================================
-# 5. FORMULIR INPUT DSS — HANYA FITUR PALING BERPENGARUH
+# 5. FORMULIR INPUT DSS
 # ==============================================================================
-st.markdown('<p class="section-label">📋 Formulir Asesmen Operasional — Berbasis Top-10 Fitur SHAP</p>',
-            unsafe_allow_html=True)
-
 with st.form(key="dss_prediction_form", border=True):
 
-    st.markdown("**🗺️ Rute Pengiriman** <small style='color:#7c3aed'>(#1 SHAP)</small>", unsafe_allow_html=True)
-    col_ocity, col_ccity = st.columns(2)
-    with col_ocity:
-        order_city = st.selectbox(
-            "Kota Asal Gudang (Order City) ★",
-            options=ORDER_CITIES if ORDER_CITIES else ["Chicago", "Los Angeles", "New York"],
-            index=0,
-            help="[SHAP Rank #8] Kota tempat gudang pengirim berada."
-        )
-    with col_ccity:
-        customer_city = st.selectbox(
-            "Kota Tujuan Pelanggan (Customer City) ★",
-            options=CUSTOMER_CITIES if CUSTOMER_CITIES else ["Los Angeles", "Chicago", "Houston"],
-            index=0,
-            help="[SHAP Rank #7] Kota tujuan pengiriman pelanggan."
-        )
+    col1, col2, col3, col4, col5, col6 = st.columns([1.5, 1.5, 1.2, 1, 1.2, 1])
+    
+    with col1:
+        order_city = st.selectbox("Kota Gudang ★", options=ORDER_CITIES if ORDER_CITIES else ["Chicago", "Los Angeles", "New York"], index=0)
+    with col2:
+        customer_city = st.selectbox("Kota Tujuan ★", options=CUSTOMER_CITIES if CUSTOMER_CITIES else ["Los Angeles", "Chicago", "Houston"], index=0)
+    with col3:
+        shipping_mode = st.selectbox("Moda Kirim ★", options=["Standard Class", "Second Class", "First Class", "Same Day"], index=0)
+    with col4:
+        days_scheduled = st.number_input("Target Hari ★", min_value=0, max_value=30, value=4, step=1)
+    with col5:
+        order_type = st.selectbox("Tipe Transaksi ★", options=["DEBIT", "TRANSFER", "CASH", "PAYMENT"], index=0)
+    with col6:
+        day_of_week = st.selectbox("Hari Pesan", options=list(range(7)), format_func=lambda x: ["Senin","Selasa","Rabu","Kamis","Jumat","Sabtu","Minggu"][x], index=0)
 
-    st.markdown("**🚛 Mode & Jadwal Pengiriman** <small style='color:#7c3aed'>(#2 & #6 SHAP)</small>", unsafe_allow_html=True)
-    col_mode, col_days, col_type, col_dow = st.columns(4)
-    with col_mode:
-        shipping_mode = st.selectbox(
-            "Moda Pengiriman ★",
-            options=["Standard Class", "Second Class", "First Class", "Same Day"],
-            index=0,
-            help="[SHAP Rank #2 | Gini #3] Kelas layanan pengiriman yang paling kuat mempengaruhi keterlambatan."
-        )
-    with col_days:
-        days_scheduled = st.number_input(
-            "Target Hari Pengiriman ★",
-            min_value=0, max_value=30, value=4, step=1,
-            help="[SHAP Rank #6 | Gini #4] Estimasi durasi pengiriman terjadwal."
-        )
-    with col_type:
-        order_type = st.selectbox(
-            "Tipe Transaksi ★",
-            options=["DEBIT", "TRANSFER", "CASH", "PAYMENT"],
-            index=0,
-            help="[SHAP Rank #5] Metode pembayaran transaksi."
-        )
-    with col_dow:
-        day_of_week = st.selectbox(
-            "Hari Pemesanan",
-            options=list(range(7)),
-            format_func=lambda x: ["Senin","Selasa","Rabu","Kamis","Jumat","Sabtu","Minggu"][x],
-            index=0,
-            help="Hari dalam minggu saat pesanan dibuat."
-        )
-
-    st.caption("💡 **Smart Location:** Lokasi & koordinat akan dideteksi otomatis berdasarkan pilihan Kota.")
 
     # ── Tombol Submit ─────────────────────────────────────────────────────────
     submitted = st.form_submit_button(
@@ -453,18 +416,18 @@ if submitted:
         if is_risky:
             st.markdown(f"""
             <div class="result-danger">
-                <div style="font-size:1.5rem; margin-bottom:0.1rem;">⚠️</div>
-                <div style="font-size:1rem; font-weight:800; color:#f87171; margin-bottom:0.1rem;">
+                <div style="font-size:1.2rem; margin-bottom:0;">⚠️</div>
+                <div style="font-size:0.9rem; font-weight:800; color:#f87171; margin-bottom:0;">
                     RISIKO KETERLAMBATAN TERDETEKSI
                 </div>
-                <div style="font-size:2rem; font-weight:900; color:#ef4444; letter-spacing:-1px;">
+                <div style="font-size:1.8rem; font-weight:900; color:#ef4444; letter-spacing:-1px;">
                     {pct:.1f}%
                 </div>
-                <div style="color:#fca5a5; font-size:0.75rem; margin-top:0.1rem;">
-                    Probabilitas Keterlambatan · Threshold: 45.0%
+                <div style="color:#fca5a5; font-size:0.7rem; margin-top:0;">
+                    Threshold: 45.0%
                 </div>
-                <div style="margin-top:0.3rem; font-size:0.75rem; color:#fca5a5; background:rgba(239,68,68,0.1);
-                     border-radius:8px; padding:0.3rem 0.5rem;">
+                <div style="margin-top:0.2rem; font-size:0.7rem; color:#fca5a5; background:rgba(239,68,68,0.1);
+                     border-radius:6px; padding:0.2rem 0.4rem;">
                     ⚡ <strong>Rekomendasi:</strong> Lakukan intervensi segera.
                 </div>
             </div>
@@ -472,47 +435,36 @@ if submitted:
         else:
             st.markdown(f"""
             <div class="result-safe">
-                <div style="font-size:1.5rem; margin-bottom:0.1rem;">✅</div>
-                <div style="font-size:1rem; font-weight:800; color:#34d399; margin-bottom:0.1rem;">
+                <div style="font-size:1.2rem; margin-bottom:0;">✅</div>
+                <div style="font-size:0.9rem; font-weight:800; color:#34d399; margin-bottom:0;">
                     JADWAL PENGIRIMAN AMAN
                 </div>
-                <div style="font-size:2rem; font-weight:900; color:#10b981; letter-spacing:-1px;">
+                <div style="font-size:1.8rem; font-weight:900; color:#10b981; letter-spacing:-1px;">
                     {pct:.1f}%
                 </div>
-                <div style="color:#6ee7b7; font-size:0.75rem; margin-top:0.1rem;">
-                    Probabilitas Keterlambatan · Threshold: 45.0%
+                <div style="color:#6ee7b7; font-size:0.7rem; margin-top:0;">
+                    Threshold: 45.0%
                 </div>
-                <div style="margin-top:0.3rem; font-size:0.75rem; color:#6ee7b7; background:rgba(16,185,129,0.1);
-                     border-radius:8px; padding:0.3rem 0.5rem;">
+                <div style="margin-top:0.2rem; font-size:0.7rem; color:#6ee7b7; background:rgba(16,185,129,0.1);
+                     border-radius:6px; padding:0.2rem 0.4rem;">
                     ✔️ <strong>Rekomendasi:</strong> Pengiriman sesuai jadwal standar.
                 </div>
             </div>
             """, unsafe_allow_html=True)
 
     with col_detail:
-        st.markdown("**📋 Ringkasan Parameter Prediksi**")
-
         # Fitur yang dihitung otomatis
         customer_state, customer_country = CUSTOMER_CITY_MAP.get(customer_city, ("CA", "EE. UU."))
         order_state, order_country       = ORDER_CITY_MAP.get(order_city, ("California", "Estados Unidos"))
-        
-        lat_val, lon_val = (18.22, -66.59) if customer_country == "Puerto Rico" else (39.50, -98.35)
         route_val        = f"{order_city.strip()} → {customer_city.strip()}"
-        day_names        = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"]
 
         st.markdown(f"""
-        | Parameter | Nilai |
-        |---|---|
-        | 📍 Rute | `{route_val}` |
-        | 🌍 Negara Pelanggan | `{customer_country}` |
-        | 📌 Negara Gudang | `{order_country}` |
-        | 📌 State Pelanggan | `{customer_state}` |
-        | 🚛 Moda Kirim | `{shipping_mode}` |
-        | ⏱️ Target Hari | `{days_scheduled} hari` |
-        | 💳 Tipe Transaksi | `{order_type}` |
-        | 📅 Hari Pesan | `{day_names[day_of_week]}` |
-        | 🗺️ Koordinat | `{lat_val:.2f}°, {lon_val:.2f}°` |
-        """)
+        <div style="font-size:0.75rem;">
+        <b>📍 Rute:</b> `{route_val}` &nbsp;|&nbsp; <b>⏱️ Target:</b> `{days_scheduled} hari`<br>
+        <b>🌍 Negara Pelanggan:</b> `{customer_country}` &nbsp;|&nbsp; <b>📌 Negara Gudang:</b> `{order_country}`<br>
+        <b>🚛 Moda:</b> `{shipping_mode}` &nbsp;|&nbsp; <b>💳 Tipe Transaksi:</b> `{order_type}`
+        </div>
+        """, unsafe_allow_html=True)
 
 
 
